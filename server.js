@@ -15,31 +15,32 @@ export function createServer({ rootDir = __dirname } = {}) {
     }
 
     if (req.url === '/' || req.url === '/freight-quote.html') {
-      const html = await readFile(path.join(rootDir, 'freight-quote.html'), 'utf8');
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      res.end(html);
+      try {
+        const html = await readFile(path.join(rootDir, 'freight-quote.html'), 'utf8');
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+        res.end(html);
+      } catch {
+        res.writeHead(500, { 'content-type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ ok: false, message: 'Failed to load freight-quote.html' }));
+      }
       return;
     }
 
     if (req.url === '/freight-quote-app.js') {
-      const js = await readFile(path.join(rootDir, 'freight-quote-app.js'), 'utf8');
-      res.writeHead(200, { 'content-type': 'application/javascript; charset=utf-8' });
-      res.end(js);
+      try {
+        const js = await readFile(path.join(rootDir, 'freight-quote-app.js'), 'utf8');
+        res.writeHead(200, { 'content-type': 'application/javascript; charset=utf-8' });
+        res.end(js);
+      } catch {
+        res.writeHead(500, { 'content-type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ ok: false, message: 'Failed to load freight-quote-app.js' }));
+      }
       return;
     }
 
     res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ ok: false, message: 'Not Found' }));
   });
-
-  const originalListen = server.listen.bind(server);
-  server.listen = (...args) => {
-    if (args.length === 1 && typeof args[0] === 'number') {
-      return originalListen(args[0], '127.0.0.1');
-    }
-
-    return originalListen(...args);
-  };
 
   return server;
 }

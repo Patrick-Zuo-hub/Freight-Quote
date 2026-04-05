@@ -5,15 +5,20 @@ import { createServer } from '../server.js';
 
 test('GET /health returns ok payload', async () => {
   const app = createServer({ rootDir: process.cwd() });
-  app.listen(0);
-  await once(app, 'listening');
-  const { port } = app.address();
+  app.listen(0, '127.0.0.1');
 
-  const response = await fetch(`http://127.0.0.1:${port}/health`);
-  const payload = await response.json();
+  try {
+    await once(app, 'listening');
+    const { port } = app.address();
 
-  assert.equal(response.status, 200);
-  assert.deepEqual(payload, { ok: true });
+    const response = await fetch(`http://127.0.0.1:${port}/health`);
+    const payload = await response.json();
 
-  await new Promise((resolve) => app.close(resolve));
+    assert.equal(response.status, 200);
+    assert.deepEqual(payload, { ok: true });
+  } finally {
+    if (app.listening) {
+      await new Promise((resolve) => app.close(resolve));
+    }
+  }
 });

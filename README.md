@@ -21,3 +21,15 @@ npm start
 ```bash
 npm test
 ```
+
+## 健康检查
+
+```bash
+curl http://127.0.0.1:8787/health
+```
+
+返回：
+
+```json
+{"ok":true}
+```
