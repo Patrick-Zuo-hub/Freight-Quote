@@ -1,4 +1,23 @@
 const DEFAULT_BATCH_ROWS = 8;
+const HOT_WAREHOUSE_CODES = [
+  'AVP1',
+  'CLT2',
+  'FWA4',
+  'IND9',
+  'SBD1',
+  'ABE8',
+  'LGB8',
+  'LAS1',
+  'RDU2',
+  'LAX9',
+  'GYR2',
+  'RMN3',
+  'FTW1',
+  'ONT8',
+  'SCK4',
+  'GYR3',
+  'PSP3'
+];
 
 const state = {
   meta: null,
@@ -629,6 +648,21 @@ function renderComparisonSection() {
           ${state.comparison.running ? '查询中...' : '查询'}
         </button>
       </div>
+      <div class="chip-row" style="margin-top: 14px;">
+        ${HOT_WAREHOUSE_CODES.map(
+          (code) => `
+            <button
+              type="button"
+              class="chip"
+              data-role="hotWarehouseCode"
+              data-warehouse-code="${escapeHtml(code)}"
+              ${warehouseCode === code ? 'aria-pressed="true"' : ''}
+            >
+              ${escapeHtml(code)}
+            </button>
+          `
+        ).join('')}
+      </div>
       <div class="status ${escapeHtml(state.comparison.status.tone || 'ok')}">${escapeHtml(state.comparison.status.message || '')}</div>
     </section>
 
@@ -722,6 +756,13 @@ document.addEventListener('click', async (event) => {
   }
 
   if (event.target.id === 'comparison-run-btn') {
+    await runComparisonQuery();
+    return;
+  }
+
+  const hotWarehouseButton = event.target.closest('[data-role="hotWarehouseCode"]');
+  if (hotWarehouseButton) {
+    state.comparison.warehouseCode = hotWarehouseButton.dataset.warehouseCode || '';
     await runComparisonQuery();
   }
 });
