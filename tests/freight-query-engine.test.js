@@ -33,6 +33,19 @@ const storage = {
           taxStartStandard: '100KG',
           referenceAging: '10-12天',
           compensationAging: '5天'
+        },
+        {
+          supplierId: 'zhedao-w14',
+          supplierName: '赤道国际',
+          warehouseCode: 'LAX9',
+          channel: '渠道 C',
+          yiwuPackageTaxPrice: 5.2,
+          shenzhenPackageTaxPrice: 5,
+          yiwuOriginLabel: '义乌',
+          shenzhenOriginLabel: '深圳',
+          taxStartStandard: '100KG',
+          referenceAging: '15-18天',
+          compensationAging: '6天'
         }
       ]
     },
@@ -148,6 +161,36 @@ test('batch query preserves pasted order duplicates and shapes rows as fixed cel
   });
 });
 
+test('batch query pads shorter rows to a fixed cell width for table alignment', () => {
+  const engine = createFreightQueryEngine({ storage, discounts });
+
+  const result = engine.batchQuery({
+    supplierId: 'zhedao-w14',
+    deliveryOptionKey: 'shenzhen',
+    warehouseCodes: ['ONT8', 'LAX9']
+  });
+
+  assert.equal(result.columnCount, 2);
+  assert.equal(result.rows[0].cells.length, 2);
+  assert.equal(result.rows[1].cells.length, 2);
+  assert.deepEqual(result.rows[1].cells[0], {
+    channel: '渠道 C',
+    finalPrice: 4.8,
+    referenceAging: '15-18天',
+    compensationAging: '6天',
+    taxStartStandard: '100KG',
+    originLabel: '深圳'
+  });
+  assert.deepEqual(result.rows[1].cells[1], {
+    channel: '',
+    finalPrice: null,
+    referenceAging: '',
+    compensationAging: '',
+    taxStartStandard: '',
+    originLabel: ''
+  });
+});
+
 test('batch query uses the selected supplier delivery option when shaping rows', () => {
   const engine = createFreightQueryEngine({ storage, discounts });
 
@@ -168,4 +211,20 @@ test('batch query uses the selected supplier delivery option when shaping rows',
       originLabel: '华东'
     }
   ]);
+});
+
+test('negative discount amounts increase the final price', () => {
+  const engine = createFreightQueryEngine({
+    storage,
+    discounts: {
+      suppliers: {
+        'zhedao-w14': { discountAmount: -0.2, enabled: true }
+      }
+    }
+  });
+
+  const result = engine.queryByWarehouse('ONT8');
+
+  assert.equal(result.supplierGroups[0].records[0].finalPrice, 4.5);
+  assert.equal(result.supplierGroups[0].records[1].finalPrice, 4.7);
 });
