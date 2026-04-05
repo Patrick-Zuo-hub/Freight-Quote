@@ -34,6 +34,20 @@ function createVisibleMeiqiWorkbook(tkSheet = createMeiqiTkSheet(), matchSheet =
   return workbook;
 }
 
+function createMeiqiMatchSheet() {
+  const sheet = XLSX.utils.aoa_to_sheet(Array.from({ length: 7 }, () => Array(12).fill('')));
+
+  sheet.G4 = { t: 's', v: 'Match二组-直送' };
+  sheet.G5 = { t: 's', v: '深圳/义乌' };
+  sheet.G6 = { t: 's', v: '15KG+' };
+  sheet.C7 = { t: 's', v: ' ont8 ' };
+  sheet.G7 = { t: 'n', v: 7.15 };
+  sheet.H7 = { t: 's', v: '22天' };
+  sheet.I7 = { t: 's', v: '28天' };
+  sheet['!ref'] = 'A1:L7';
+  return sheet;
+}
+
 test('美琦 visible workbook with missing structure returns parser-level error', () => {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([['bad']]), 'TK直送');
@@ -105,4 +119,17 @@ test('美琦 workbook preserves raw origin label on parsed records', () => {
   assert.equal(dataset.records[0].warehouseCode, 'LAX9');
   assert.equal(dataset.records[0].rawOriginLabel, '深圳/义乌');
   assert.equal(dataset.records[0].yiwuPackageTaxPrice, 6.28);
+});
+
+test('美琦 Match系列 multi-group sheet parses a visible grouped channel', () => {
+  const workbook = createVisibleMeiqiWorkbook(createMeiqiTkSheet({ withData: false }), createMeiqiMatchSheet());
+  const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+  const dataset = detectSupplierDataset(buffer, { filename: 'meiqi-match.xlsx' });
+
+  assert.equal(dataset.records.length, 1);
+  assert.equal(dataset.records[0].channel, 'Match二组-直送');
+  assert.equal(dataset.records[0].warehouseCode, 'ONT8');
+  assert.equal(dataset.records[0].rawOriginLabel, '深圳/义乌');
+  assert.equal(dataset.records[0].yiwuPackageTaxPrice, 7.15);
 });
