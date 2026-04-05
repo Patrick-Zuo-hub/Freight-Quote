@@ -1,0 +1,6 @@
+node_modules/
+data/freight/uploads/
+data/freight/current.json
+data/freight/discounts.json
+.superpowers/
+.DS_Store
