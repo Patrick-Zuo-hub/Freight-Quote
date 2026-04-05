@@ -228,3 +228,19 @@ test('negative discount amounts increase the final price', () => {
   assert.equal(result.supplierGroups[0].records[0].finalPrice, 4.5);
   assert.equal(result.supplierGroups[0].records[1].finalPrice, 4.7);
 });
+
+test('disabled discounts ignore nonzero discount amounts and preserve parsed prices', () => {
+  const engine = createFreightQueryEngine({
+    storage,
+    discounts: {
+      suppliers: {
+        'zhedao-w14': { discountAmount: 0.5, enabled: false }
+      }
+    }
+  });
+
+  const result = engine.queryByWarehouse('ONT8');
+
+  assert.equal(result.supplierGroups[0].records[0].finalPrice, 4.3);
+  assert.equal(result.supplierGroups[0].records[1].finalPrice, 4.5);
+});
