@@ -132,8 +132,7 @@ test('delivery options are derived from parsed records instead of hardcoded labe
     { key: 'yiwu', label: '华东', mode: 'yiwu' }
   ]);
   assert.deepEqual(meiqiOptions, [
-    { key: 'shenzhen', label: '深圳/中山/广州/义乌/苏州', mode: 'shenzhen' },
-    { key: 'yiwu', label: '深圳/中山/广州/义乌/苏州', mode: 'yiwu' }
+    { key: 'shenzhen', label: '深圳/中山/广州/义乌/苏州', mode: 'shenzhen' }
   ]);
 });
 

@@ -34,7 +34,7 @@ test('GET /api/freight/meta returns store metadata', async () => {
     getMeta() {
       return {
         hasDataset: true,
-        suppliers: [{ id: 'zhedao-w14', name: '赤道国际' }]
+        suppliers: [{ id: 'zhedao-w14', name: '赤道国际', deliveryOptions: [{ key: 'shenzhen', label: '深圳' }] }]
       };
     },
     getDiscounts() {
@@ -47,10 +47,9 @@ test('GET /api/freight/meta returns store metadata', async () => {
     const payload = await response.json();
 
     assert.equal(response.status, 200);
-    assert.deepEqual(payload, {
-      hasDataset: true,
-      suppliers: [{ id: 'zhedao-w14', name: '赤道国际' }]
-    });
+    assert.equal(payload.hasDataset, true);
+    assert.equal(payload.suppliers[0].id, 'zhedao-w14');
+    assert.equal(payload.suppliers[0].deliveryOptions[0].label, '深圳');
   });
 });
 
@@ -95,6 +94,45 @@ test('POST /api/freight/discounts saves supplier discount', async () => {
         enabled: true
       }
     });
+  });
+});
+
+test('POST /api/freight/upload imports a base64 workbook payload', async () => {
+  const calls = [];
+  const store = {
+    getMeta() {
+      return { hasDataset: true, suppliers: [{ id: 'zhedao-w14', name: '赤道国际' }] };
+    },
+    getDiscounts() {
+      return { suppliers: {} };
+    },
+    async importWorkbook(payload) {
+      calls.push(payload);
+      return {
+        supplier: { id: 'zhedao-w14', name: '赤道国际' }
+      };
+    }
+  };
+
+  await withServer({ rootDir: process.cwd(), store }, async ({ port }) => {
+    const response = await fetch(`http://127.0.0.1:${port}/api/freight/upload`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        supplierId: 'zhedao-w14',
+        filename: 'quote.xlsx',
+        contentBase64: Buffer.from('ok').toString('base64')
+      })
+    });
+    const payload = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(calls.length, 1);
+    assert.equal(String(calls[0].buffer), 'ok');
+    assert.equal(calls[0].filename, 'quote.xlsx');
+    assert.equal(calls[0].supplierId, 'zhedao-w14');
+    assert.equal(payload.ok, true);
+    assert.equal(payload.supplier.id, 'zhedao-w14');
   });
 });
 

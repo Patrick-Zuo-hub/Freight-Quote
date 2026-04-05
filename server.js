@@ -35,12 +35,20 @@ function createInternalServerError() {
 
 export function createServer({ rootDir = __dirname, store, queryEngine } = {}) {
   const resolvedStore = store || createFreightQuoteStore({ rootDir });
-  const getQueryEngine = () =>
-    queryEngine ||
-    createFreightQueryEngine({
+  const getQueryEngine = () => {
+    if (queryEngine) {
+      return queryEngine;
+    }
+
+    if (typeof resolvedStore.getCurrent !== 'function' || typeof resolvedStore.getDiscounts !== 'function') {
+      return null;
+    }
+
+    return createFreightQueryEngine({
       storage: resolvedStore.getCurrent(),
       discounts: resolvedStore.getDiscounts()
     });
+  };
 
   const server = http.createServer(async (req, res) => {
     try {
@@ -51,7 +59,21 @@ export function createServer({ rootDir = __dirname, store, queryEngine } = {}) {
       }
 
       if (req.method === 'GET' && requestUrl.pathname === '/api/freight/meta') {
-        return sendJson(res, 200, resolvedStore.getMeta());
+        const meta = resolvedStore.getMeta();
+        const discounts = typeof resolvedStore.getDiscounts === 'function' ? resolvedStore.getDiscounts() : { suppliers: {} };
+        const engine = getQueryEngine();
+        const suppliers = Array.isArray(meta.suppliers)
+          ? meta.suppliers.map((supplier) => ({
+              ...supplier,
+              discount: discounts.suppliers?.[supplier.id] || {
+                supplierId: supplier.id,
+                discountAmount: 0,
+                enabled: false
+              },
+              deliveryOptions: engine?.getDeliveryOptions ? engine.getDeliveryOptions(supplier.id) : supplier.deliveryOptions || []
+            }))
+          : [];
+        return sendJson(res, 200, { ...meta, suppliers });
       }
 
       if (req.method === 'GET' && requestUrl.pathname === '/api/freight/discounts') {
@@ -74,6 +96,30 @@ export function createServer({ rootDir = __dirname, store, queryEngine } = {}) {
         return sendJson(res, 200, {
           ok: true,
           discount: await resolvedStore.saveDiscount(body.supplierId, body)
+        });
+      }
+
+      if (req.method === 'POST' && requestUrl.pathname === '/api/freight/upload') {
+        const body = await readJson(req);
+        if (!body?.supplierId || !body?.filename || !body?.contentBase64) {
+          throw new FreightError({
+            code: 'UPLOAD_PAYLOAD_INVALID',
+            level: 'structure',
+            message: '上传报价时必须提供物流商、文件名和文件内容。'
+          });
+        }
+
+        const imported = await resolvedStore.importWorkbook({
+          supplierId: body.supplierId,
+          filename: body.filename,
+          buffer: Buffer.from(body.contentBase64, 'base64')
+        });
+
+        return sendJson(res, 200, {
+          ok: true,
+          message: `${imported?.supplier?.name || body.supplierId}报价已更新。`,
+          supplier: imported?.supplier || null,
+          meta: resolvedStore.getMeta()
         });
       }
 
