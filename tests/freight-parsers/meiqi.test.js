@@ -59,6 +59,19 @@ test('美琦 visible workbook with missing structure returns parser-level error'
   });
 });
 
+test('美琦 only one visible anchor sheet remains unsupported template', () => {
+  const workbook = createVisibleMeiqiWorkbook();
+  workbook.Workbook = {
+    Sheets: [
+      { name: 'TK直送', Hidden: 0 },
+      { name: 'Match系列 ', Hidden: 1 }
+    ]
+  };
+  const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+  assert.throws(() => detectSupplierDataset(buffer), /暂不支持这份报价表模板/);
+});
+
 test('美琦 empty required visible sheet throws structure-level FreightError', () => {
   const workbook = createVisibleMeiqiWorkbook(createMeiqiTkSheet());
   delete workbook.Sheets['Match系列 ']['!ref'];
