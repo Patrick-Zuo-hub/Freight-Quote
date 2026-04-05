@@ -43,6 +43,45 @@ test('failed replacement clears supplier dataset', async () => {
   assert.equal(failingStore.hasDataset('zhedao-w14'), false);
 });
 
+test('supplier mismatch rejects without clearing the existing dataset', async () => {
+  const rootDir = await mkdtemp(path.join(os.tmpdir(), 'freight-mismatch-'));
+  const store = createFreightQuoteStore({
+    rootDir,
+    detectDataset: () => ({
+      supplier: { id: 'zhedao-w14', name: '赤道国际', code: 'zhedao', order: 1 },
+      sourceFilename: 'ok.xlsx',
+      records: [{ warehouseCode: 'ONT8', channel: 'A' }]
+    })
+  });
+
+  await store.importWorkbook({
+    buffer: Buffer.from('ok'),
+    filename: 'ok.xlsx',
+    supplierId: 'zhedao-w14'
+  });
+
+  const mismatchStore = createFreightQuoteStore({
+    rootDir,
+    detectDataset: () => ({
+      supplier: { id: 'nuoku-vip', name: '纽酷国际', code: 'nuoku', order: 2 },
+      sourceFilename: 'nuoku.xlsx',
+      records: [{ warehouseCode: 'LAX9', channel: 'B' }]
+    })
+  });
+
+  await assert.rejects(
+    () =>
+      mismatchStore.importWorkbook({
+        buffer: Buffer.from('mismatch'),
+        filename: 'nuoku.xlsx',
+        supplierId: 'zhedao-w14'
+      }),
+    /当前上传入口是“zhedao-w14”，但文件识别结果是“nuoku-vip”/
+  );
+
+  assert.equal(mismatchStore.hasDataset('zhedao-w14'), true);
+});
+
 test('discounts persist independently from current dataset', async () => {
   const rootDir = await mkdtemp(path.join(os.tmpdir(), 'freight-discounts-'));
   const store = createFreightQuoteStore({ rootDir, detectDataset: () => null });
