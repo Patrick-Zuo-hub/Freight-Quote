@@ -827,7 +827,7 @@ async function bootstrap() {
   renderAll();
 
   if (window.location.protocol === 'file:') {
-    setBanner('当前页面是直接从本地文件打开的。请先运行 node server.js，再访问 http://127.0.0.1:8787/freight-quote.html 。', 'warn');
+    setBanner('当前页面是直接从本地文件打开的。请先运行 node server.js，再访问 http://127.0.0.1:8787/freight-quote.html 。如果 8787 被占用，也可以用 PORT=8788 npm start 改端口后再访问。', 'warn');
     return;
   }
 

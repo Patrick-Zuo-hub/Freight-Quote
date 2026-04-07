@@ -8,6 +8,8 @@ import { FreightError, isFreightError } from './lib/freight-errors.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const DEFAULT_HOST = '127.0.0.1';
+const DEFAULT_PORT = 8787;
 
 async function readJson(req) {
   const chunks = [];
@@ -155,9 +157,46 @@ export function createServer({ rootDir = __dirname, store, queryEngine } = {}) {
   return server;
 }
 
-if (process.argv[1] === __filename) {
-  const server = createServer();
-  server.listen(8787, '127.0.0.1', () => {
-    console.log('Freight Quote running at http://127.0.0.1:8787/freight-quote.html');
+export function resolveServerConfig(env = process.env) {
+  const configuredPort = Number.parseInt(env.PORT || '', 10);
+
+  return {
+    host: env.HOST || DEFAULT_HOST,
+    port: Number.isInteger(configuredPort) && configuredPort > 0 ? configuredPort : DEFAULT_PORT
+  };
+}
+
+export function createPortInUseMessage({ host, port }) {
+  return `端口 ${host}:${port} 已被占用。请先关闭旧服务，或使用 PORT=${port + 1} npm start 改用其他端口。`;
+}
+
+export function startServer(options = {}) {
+  const server = createServer(options);
+  const { host, port } = resolveServerConfig(options.env);
+
+  return new Promise((resolve, reject) => {
+    server.once('error', (error) => {
+      if (error?.code === 'EADDRINUSE') {
+        reject(new Error(createPortInUseMessage({ host, port }), { cause: error }));
+        return;
+      }
+
+      reject(error);
+    });
+
+    server.listen(port, host, () => {
+      resolve({ server, host, port });
+    });
   });
+}
+
+if (process.argv[1] === __filename) {
+  startServer()
+    .then(({ host, port }) => {
+      console.log(`Freight Quote running at http://${host}:${port}/freight-quote.html`);
+    })
+    .catch((error) => {
+      console.error(error.message);
+      process.exitCode = 1;
+    });
 }

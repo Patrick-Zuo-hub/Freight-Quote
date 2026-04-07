@@ -26,11 +26,19 @@ npm install
 npm start
 ```
 
+如果 `8787` 已被占用，可以改用其他端口启动：
+
+```bash
+PORT=8788 npm start
+```
+
 启动后打开：
 
 ```text
 http://127.0.0.1:8787/freight-quote.html
 ```
+
+如果你改了端口，就把上面的 `8787` 替换成对应端口。
 
 ## 使用方式
 
